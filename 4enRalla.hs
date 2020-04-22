@@ -10,7 +10,12 @@ type Fila = [String]
 
 data Jugador = Persona | Maquina | Ningu deriving (Show,Eq)
 data Nivell = Facil | Dificil | Impossible deriving (Show,Eq)
-data Arbre a = Buit | Node a [Arbre a] deriving (Show,Eq) 
+
+
+--------    Arbres
+data Arbre a = Arbre a [Arbre a] deriving (Show,Eq,Ord) 
+
+
 
 
 
@@ -61,13 +66,13 @@ moureFitxa dificultat j opcions tauler = do
 
         if pucMarcar pos opcions then do
             --putStrLn "-> Puc Marcar la casella"
-            let nouTauler = (replace' (concat (addZero [pos])) "XX" tauler)
+            let nouTauler = replace' pos "XX" tauler
             let opcionsActualitzadas = (novesOpcions pos opcions)
             
 
             putStrLn "\n"
             putStrLn (pintaTauler nouTauler)
-            if (partidaGuanyada pos Persona nouTauler) then acabaPartida Persona else if (tablas opcionsActualitzadas) then acabaPartida Ningu else moureFitxa dificultat Maquina opcionsActualitzadas nouTauler
+            if (tablas opcionsActualitzadas) then acabaPartida Ningu else if (partidaGuanyada pos Persona nouTauler) then acabaPartida Persona else moureFitxa dificultat Maquina opcionsActualitzadas nouTauler
         else do
             putStrLn "!!!! No pots marcara aquesta fila, selecciona una altra !!!!\n"
             moureFitxa dificultat Persona opcions tauler
@@ -79,19 +84,20 @@ moureFitxa dificultat j opcions tauler = do
         --print opcions
         --print (greedy opcions tauler)
         let pos = if dificultat == Dificil then (greedy opcions tauler) else if dificultat == Impossible then (smart opcions tauler) else addZeroString(calcularPos(addZeroString (show r1)) opcions)
-        --print pos
+        print "-> Estat de la partida"
+        --print (maxim opcions tauler)
 
         if pucMarcar pos opcions then do
             putStrLn "-> Juga la Maquina"
             --putStrLn ("-> La Maquina marca la fila: " ++ (show r1))
-            putStrLn ("-> La Maquina marca la fila: " ++ (pos))
+            putStrLn ("-> La Maquina marca la fila: " ++ (show ((read pos) `mod` (length opcions))))
             --print opcions
-            let nouTauler = (replace' (concat (addZero [pos])) "··" tauler)
+            let nouTauler = replace' pos "··" tauler
             let opcionsActualitzadas = (novesOpcions pos opcions)
             putStrLn "\n"
             putStrLn (pintaTauler nouTauler)
             putStrLn "\n"
-            if (partidaGuanyada pos Maquina nouTauler) then acabaPartida Maquina else if (tablas opcionsActualitzadas) then acabaPartida Ningu else moureFitxa dificultat Persona opcionsActualitzadas nouTauler
+            if (tablas opcionsActualitzadas) then acabaPartida Ningu else if (partidaGuanyada pos Maquina nouTauler) then acabaPartida Maquina else moureFitxa dificultat Persona opcionsActualitzadas nouTauler
             
         else do
             --putStrLn "\t-> La maquina no ha pogut marcar la casella "
@@ -105,47 +111,108 @@ moureFitxa dificultat j opcions tauler = do
 
 --------    Funcions de Estrategia Smart
 
-smart :: [Posicio] -> Tauler -> Posicio
-smart opcions tauler =  "02"
+maxim :: [Posicio] -> Tauler -> [Int]
+maxim opcions tauler =  heuristicsFills where 
+    arbre = crearArbre 0 opcions tauler 0 []
+    heuristicsFills = map arrelArbre (fillsArbre arbre)
+    max = maximum heuristicsFills
 
-smart2 :: [Posicio] -> Tauler -> Int
-smart2 opcions tauler =  heuristicSmart opcions tauler
+smart :: [Posicio] -> Tauler -> Posicio
+smart opcions tauler =  millorPos where 
+    arbre = crearArbre 0 opcions tauler 0 []
+    heuristicsFills = map arrelArbre (fillsArbre arbre)
+    max = maximum heuristicsFills
+    maxIndex = elemIndices max heuristicsFills
+    maxIndexFactible = [x | x <- maxIndex , (pucMarcar (opcions!!x) opcions)]
+
+    --millorPos = opcions!!(maxIndexFactible!!0)
+    millorsPos = map (\a -> opcions!!a) maxIndexFactible
+    millorPos = greedy millorsPos tauler
 
 -- Retorna -1 si guanya el adversari, 1 si guanyem nosaltres o 0 si no guanya ningu
-heuristicSmart :: [Posicio] -> Tauler -> Int
-heuristicSmart opcions tauler =  if millorsOpcions1 == 4 then -1 else if millorsOpcions2 == 4 then 1 else 0 where
+heuristicSmart :: Jugador -> [Posicio] -> Tauler -> Int
+heuristicSmart j opcions tauler = if j == Persona then hPersona else hMaquina where
 
     -- Llista amb els valors dels heuristics per cada posicio. (Exemple: [3,2,2,1] -> marcant la pos 0 conseguiria un 3 en linia)
-    heuristic1 = map (\a -> millorJugada a Persona tauler) opcions
-    heuristic2 = map (\a -> millorJugada a Maquina tauler) opcions
-
-    -- Llista per saber si el oponent esta a punt de fer una linia
-    posicionsDecisives = [x | x <- heuristic1, x == 4]  
-    valorsABloquejar = elemIndices 4 heuristic1             -- Llista de indexos que fariesn 4 en linia
-    posABloquejar = if length valorsABloquejar > 0 then opcions!!(valorsABloquejar!!0) else "-1" -- Posicio que hauriem de bloquejar per evitar una linia
+    heuristicP = map (\a -> millorJugada a Persona tauler) opcions
+    heuristicM = map (\a -> millorJugada a Maquina tauler) opcions
 
     -- Mirem quin es el millor resultat que podem obtenir
-    millorsOpcions1 = maximum heuristic1        
-    millorsOpcions2 = maximum heuristic2
+    millorResultatP = maximum heuristicP        
+    millorResultatM = maximum heuristicM
+
+    -- Conseguim els indexos de les posicions que ens poden conseguir aquest millor resultat
+    indexosValorsP = elemIndices millorResultatP heuristicP
+    indexosValorsM = elemIndices millorResultatM heuristicM
+
+    -- Calculem quantes linies de 4 pot fer cadascu
+    molestarAP = if length indexosValorsP <= 1 then True else False
+    molestarAM = if length indexosValorsM <= 1 then True else False
+
+    -- Calculem el Heuristic en funcio de qui estigui jugant
+    -- Si el que juga te linia de 4 aleshores guanya ->  = 1
+    -- Si el oponent te linia de 4 i no podem bloquejar totes les seves linies aleshores perdem -> = -1
+    -- En qualsevol altre cas, no tenim guanyador ni perdedor
+    hPersona = if (millorResultatP == 4) then -1 else if (millorResultatM == 4 && (not molestarAM)) then 1 else 0   -- Juga Persona
+    hMaquina = if (millorResultatM == 4) then 1 else if (millorResultatP == 4 && (not molestarAP)) then -1 else 0
+
+preordre :: Arbre a -> [a]
+preordre (Arbre x fills) = x : concatMap preordre fills
+
+mida :: (Num a ) => Arbre a -> a
+mida (Arbre _ fills) = 1 + sum (map mida fills)
 
 
---minmax :: Int -> Jugador -> nosaltres
+crearArbre :: Int -> [Posicio] -> Tauler -> Int -> [Int] -> Arbre Int
+crearArbre 4 opcions tauler arrel _ = Arbre (heuristicSmart Maquina opcions tauler) []
+crearArbre prof opcions tauler _ _ = a where
 
+    j = if even prof then Maquina else Persona
+    fitxa = if j == Maquina then "··" else "XX"        -- (CANVIARR!!!!)Si estem a un nivell parell esque li toca decidir a la maquina
+
+    --root = heuristicSmart j opcions tauler
+
+    llistaNousTaulers = map (\pos -> replace' pos fitxa tauler) opcions
+    llistaNovesOpcions = (map (\pos -> novesOpcions pos opcions) opcions)
+
+    opcionsValides = [x | x <- opcions, x /= "-1"]
+
+    subArbre = map (\pos -> crearArbre (prof+1) (novaOpcio pos) (nouTauler pos) (valorFill pos) []) opcions where
+        nouTauler p =  replace' p fitxa tauler
+        novaOpcio p =  novesOpcions p opcions
+        valorFill p = heuristicSmart j (novaOpcio p) (nouTauler p)
+
+    root = if even prof then maximum (subArbre) else minimum (subArbre)
+    valor = arrelArbre root
+    --a = if root == 0 then Arbre root subArbre else Arbre root []
+    a = Arbre valor subArbre
+
+
+arrelArbre :: Arbre a -> a
+arrelArbre (Arbre arrel _) = arrel
+
+fillsArbre :: Arbre a -> [Arbre a]
+fillsArbre (Arbre _ fills) = fills
+
+profunditatMaxima :: Int -> Int
+profunditatMaxima columnes = if columnes <= 5 then 5 else if columnes <= 7 then 3 else 2
 
 --------    Funcions de Estrategia Greedy
 
 
 greedy :: [Posicio] -> Tauler -> Posicio
-greedy opcions tauler =  if posABloquejar == "-1" then nomesMillor else posABloquejar where
+greedy opcions tauler =  if posPerGuanyar /= "-1" then posPerGuanyar else if posABloquejar == "-1" then nomesMillor else posABloquejar where
 
     -- Llista amb els valors dels heuristics per cada posicio. (Exemple: [3,2,2,1] -> marcant la pos 0 conseguiria un 3 en linia)
     heuristic1 = map (\a -> millorJugada a Persona tauler) opcions
     heuristic2 = map (\a -> millorJugada a Maquina tauler) opcions
 
-    -- Llista per saber si el oponent esta a punt de fer una linia
-    posicionsDecisives = [x | x <- heuristic1, x == 4]  
-    valorsABloquejar = elemIndices 4 heuristic1             -- Llista de indexos que fariesn 4 en linia
-    posABloquejar = if length valorsABloquejar > 0 then opcions!!(valorsABloquejar!!0) else "-1" -- Posicio que hauriem de bloquejar per evitar una linia
+    valorDecisiuM = elemIndices 4 heuristic2
+    posPerGuanyar = if length valorDecisiuM > 0 then opcions!!(valorDecisiuM!!0) else "-1" -- Posicio que hauriem de marcar per fer una linia
+
+    -- Llista per saber si el oponent esta a punt de fer una linia 
+    valorsABloquejarP = elemIndices 4 heuristic1             -- Llista de indexos que fariesn 4 en linia
+    posABloquejar = if length valorsABloquejarP > 0 then opcions!!(valorsABloquejarP!!0) else "-1" -- Posicio que hauriem de bloquejar per evitar una linia
 
     -- Mirem quin es el millor resultat que podem obtenir
     millorsOpcions1 = maximum heuristic1        
@@ -223,19 +290,18 @@ pucMarcar pos opcions = if pos `elem` opcions && pos /= "-1" then True else Fals
 
 -- Retrona True si posant la fitxa a pos, es fa un 4 en linia
 partidaGuanyada :: Posicio -> Jugador -> Tauler -> Bool --if (length enFila3 > 0) || (length enColumna3 > 0) || (length enDiagonal > 0) then True else False
-partidaGuanyada pos j tauler =  if (length enFila3 > 0) || (length enColumna3 > 0) || enDiagonal then True else False where 
+partidaGuanyada pos j tauler =  if any liniaDe4 enFila2 || any liniaDe4 enColumna2 || enDiagonal then True else False where 
     limit = 4
     fitxa = if j == Persona then "XX" else "··"
+    liniaDe4 = (\a -> length a == 4)
 
     enFila = map (group) tauler                             -- Agrupo les files
     enFila2 = map (filter (==fitxa)) (concat enFila)        -- Em quedo nomes amb les agrupacions de les fitxes que vui mirar
-    enFila3 = [x | x <- enFila2, length x >= 4]             -- Conto quantes agrupacions hi han de 4 o mes elements
 
     enColumna = map (group) (transpose tauler)              -- Agrupo les columnes
     enColumna2 = map (filter (==fitxa)) (concat enColumna)  -- Em quedo nomes amb les agrupacions de les fitxes que vui mirar
-    enColumna3 = [x | x <- enColumna2, length x >= 4]       -- Conto quantes agrupacions hi han de 4 o mes elements
-    
-    enDiagonal = diagonal pos j tauler
+
+    enDiagonal = diagonal pos j tauler                      
 
 
 -- Retorna una llista amb la diagonal descendent de la posicio pos del tauler
@@ -284,7 +350,6 @@ calcularDiagonalUp pos tauler = result where
     
     dDownInt =  map (\x -> if taulerLlista!!x == "XX" then -1 else if taulerLlista!!x == "··" then -2 else x) dDown
     dDownString = map (\x -> if x >= 0 then addZeroString (show x) else if x == -1 then "XX" else "··") dDownInt
-    
    
     result = (dUpString ++ dDownString)
 
@@ -425,7 +490,7 @@ replace' a b ll = map (map (\x -> if (a == x) then b else x)) ll
 
 
 -- Divideix la llista en una llista de subllistes de mida (arg1)
-splitEvery :: Int -> [String] -> Tauler
+splitEvery :: Int -> [a] -> [[a]]
 splitEvery _ [] = []
 splitEvery n xs = as : splitEvery n bs 
   where (as,bs) = splitAt n xs
