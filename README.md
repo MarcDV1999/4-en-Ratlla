@@ -62,6 +62,26 @@ El programa principal es el main. En aquest fragment de codi s'introdueixen les 
 
 Posteriorment, les funcions mouMaquina i mouPersona s'encarreguen d'anar jugant.
 
+En el meu cas, el Tauler es representa com una llista de llistes de Strings. Cada posició buida del tauler, internament està representada amb un nombre que l'identifica. És a dir, internament el tauler anterior es veuria de la següent forma:
+
+```
+  /  00  /  01  /  02  /  03  /  04  /  05  /  06  /
+  - ---- - ---- - ---- - ---- - ---- - ---- - ---- -
+  |  00  |  01  |  02  |  03  |  04  |  05  |  06  |
+  - ---- - ---- - ---- - ---- - ---- - ---- - ---- -
+  |  07  |  08  |  09  |  10  |  11  |  12  |  13  |
+  - ---- - ---- - ---- - ---- - ---- - ---- - ---- -
+  |  14  |  15  |  16  |  17  |  18  |  19  |  20  |
+  - ---- - ---- - ---- - ---- - ---- - ---- - ---- -
+  |  21  |  22  |  23  |  24  |  25  |  26  |  27  |
+  - ---- - ---- - ---- - ---- - ---- - ---- - ---- -
+  |  28  |  29  |  30  |  31  |  32  |  33  |  34  |
+  - ---- - ---- - ---- - ---- - ---- - ---- - ---- -
+  |  35  |  36  |  37  |  38  |  39  |  40  |  41  |
+  - ---- - ---- - ---- - ---- - ---- - ---- - ---- -
+```
+Degut a aquesta implementació, em resulta més comode i senzill, modificar elements dins el tauler, cercar linies de 4 o més fitxes iguales, entre altres coses
+
 
 ## Algorsimes interessants
 
