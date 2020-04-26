@@ -86,26 +86,38 @@ Degut a aquesta implementació, em resulta més comode i senzill, modificar elem
 ## Algorsimes interessants
 
 ### Moure fitxa
-Al llarg de tota la partida, el programa treballa amb una llista de posicions. Aquesta llista de posicions (opcions) correspont a les posicions que es poden marcar en aquest moment. D'aquesta manera és més fàcil comprovar si la casella que volem marcar es pot marcar o no. A cada nova tirada, obviament, aquesta llista s'actualiza per a poder adaptar-se al nou tauler.
+Al llarg de tota la partida, el programa treballa amb una llista de posicions. Aquesta llista de posicions (opcions) correspont a les posicions que es poden marcar en aquest moment. D'aquesta manera és més fàcil comprovar si la casella que volem marcar es pot marcar o no. A cada nova tirada, obviament, aquesta llista s'actualiza per a poder adaptar-se al nou tauler. En el tauler del exemple, les opcions serien les següents
 
+```
+["35","36","37","38","39","40","41"]
+```
+
+Amb el "-1" representariem el fet de que no es poguessin posar més fitxes en alguna columna.
 
 ### Càlcul de Partida Guanyada
 
-Donat que aquest càlcul el fem per cada torn, només cal que comprovem si a la fila, columna i diagonals que fan referencia a la posició que anem a marcar, hi trobem alguna linia de 4 o més. D'aquesta manera ens estalviem haver de mirar tot el tauler i haver de comprovar totes les fitxes a cada torn. Per a comprovar si tenim una linia de 4 o més en horitzontal i vertical ha estat fàcil, ja que el tauler es defineix com una llista de files. Per tant, per a trobar les horitzontals només hem hagut de buscar la fila corresponent i buscar si teniem alguna linia, i per les verticals, hem hagut de trasposar el tauler, i mirar la columna que tocava.
+Donat que aquest càlcul el fem per cada torn, només cal que comprovem si a la fila, columna i diagonals que fan referencia a la posició que anem a marcar, hi trobem alguna linia de 4 o més. D'aquesta manera ens estalviem haver de mirar tot el tauler i haver de comprovar totes les fitxes a cada torn. Per a comprovar si tenim una linia de 4 o més en horitzontal i vertical ha estat fàcil, ja que el tauler es defineix com una llista de files. Per tant, per a trobar les horitzontals només he hagut de buscar la fila corresponent i buscar si teniem alguna linia, i per les verticals, he hagut de trasposar el tauler, i mirar la columna que tocava.
 
-Per l'altra banda, les diagonals, no han estat tan fàcils de trobar. Per això, primer he hagut calcular quines son les posicions que corresponent a les diagonals ascendent i descendent que conten la posicio en questio.
+Per l'altra banda, les diagonals, no han estat tan fàcils de trobar. Per això, primer he hagut calcular quines son les posicions que corresponent a les diagonals ascendent i descendent que conten la posicio en questio. Un cop determinades les posicions que corresponen a les diagonals, només queda mirar si en el tauler, les posicions trobades contenen alguna linia o no.
 
-### Càlcul del Heuristic
+### Càlcul del Heurístic
 
-Tant en l'estrategia Greedy com la Smart (explicades més tard), requereixen de un heuristic per a poder quantificar la calitat de la solució proposada en cada moment. En aquest cas, he utilitzat per a calcular el  heuristic el nombre màxim de fitxes consecutives que pot conseguir un jugador col·locant una fitxa en una posició donada. Gràcies a aquest heurístic podem valorar quina solució és millor que una altra. Per a poder calcular aquest estimador, he buscat la manera de que el seu valor sigui 1 sempre que la maquina pugui guanyar, sigui -1 quan la maquina està a punt de perdre i que sigui 0 quan la partida no estigui decidida encara. D'aquesta manera en el cas del Greedy, la maquina es capaç de saber quan esta a punt de guanyar o quan està a punt de perdre. Per l'altra banda, en el cas de Smart, com que explorem futures jugades, aquest algorisme es capaç de detectar quines jugades l'avoquen a una derrota, a una victoria o simplement a un altre estat de la partida sense finalitzar (ja que només explorem fins a certa profunditat, degut a les limitacions del hardware).
+Tant l'estrategia Greedy com la Smart (explicades més tard), requereixen d'un heurístic per a poder quantificar la calitat de la solució proposada en cada moment. En aquest cas, he utilitzat per a calcular el  heuristic el nombre màxim de fitxes consecutives que pot conseguir un jugador col·locant una fitxa en una posició donada. Per a poder calcular aquest valor, he tingut en compte el fet de que la jugada acabi en victoria per a la maquina(el seu valor seria = 1), que acabi en derrota (el seu valor seria = -1) i que la partida encara estigui per decidir (el eu valor seria = 0). D'aquesta manera en el cas del Greedy, la maquina és capaç de saber quan esta a punt de guanyar o quan està a punt de perdre, pero no és capaç de predeir més enllà de la següent jugada. Per l'altra banda, en el cas de l'Smart, com que explorem futures jugades, és capaç de predir fins a certa profunditat (degut a les limitacions del hardware) el final de la partida.
  
 
 ## Estratègies
-Per a poder passa per parametre l'estrategia, algunes d'elles tenen una segona funció que encapsula la l'algorisme per a poder retornar el mateix tipus d'informació en totes les estrategies.
+Per a poder passar per parametre l'estrategia, algunes d'elles tenen una segona funció que encapsula l'algorisme per a poder retornar el mateix tipus d'informació en totes les estrategies. A més organitzant d'aquesta manera el codi, estem desacoplant el màxim possible l'entrada/sortida del càlcul.
+
+Amb l'implementació actual del joc, cada cop que cridem a la funció mouMaquina o mouPersona (funcions per a moure una fitxa), es passa per paràmetre una funció que defineix quina estrategia seguirem
+
+```
+mouPersona :: ([Posicio] -> Tauler -> IO String) -> [Posicio] -> Tauler ->  IO()
+mouMaquina :: ([Posicio] -> Tauler -> IO String) -> [Posicio] -> Tauler ->  IO()
+```
 
 ### Random
 
-En aquesta estratègia la maquina decideix de manera aleatoria quina és la casella ha marcar. Com que aquesta funció ja retorna un IO STring no ha fet falta implementar cap funció auxiliar
+En aquesta estratègia la maquina decideix de manera aleatoria quina és la casella ha marcar. Com que aquesta funció ja retorna un IO String no ha fet falta implementar cap funció auxiliar
 
 ```
 aleatoriIO :: [Posicio] -> Tauler -> IO String
@@ -113,11 +125,11 @@ aleatoriIO :: [Posicio] -> Tauler -> IO String
 
 ### Greedy
 
-Aquesta estratègia consisteix a mirar de totes les possibles jugades que pot fer la maquina en aquest moment i triar la que millor li vagi. La diferencia entre aquesta estratègia i la smart es que aquesta última escull la millor opció en base al torn que s'està jugant, i també en base a les possibles jugades que pugui fer tant l'oponent com la pròpia maquina en un futur. 
+Aquesta estratègia consisteix a mirar totes les possibles jugades que pot fer la maquina en aquest moment, i triar la que millor li vagi. Amb l'ajuda dels heurístics que he explicat anteriorment, podem valorar quina de totes les opcions és la millor. 
 
-En aquesta estratègia fem ser heurístics per a valorar la calitat de cada solució (jugada). En aquest algorisme intentem buscar un equilibri entre aquella jugada que és més beneficiosa per a la maquina i aquella que molesta més al adversari. Depenent del estat de la partida, calcula que és el que més ens convé, si sumar punts o evitar que l'oponent sumi punts.
+En aquest algorisme intentem buscar un equilibri entre aquella jugada que és més beneficiosa per a la maquina i aquella que molesta més al adversari. Depenent del estat de la partida, calcula que és el que més ens convé, si sumar punts o evitar que l'oponent en sumi.
 
-Com que aquesta funció retornava un Posició (String) i feia falta que retornés un IO String, ha estat necessari una funció auxiliar que encapsulés el algorisme i retornés un IO String
+Com que aquesta funció retorna un Posició (String) i feia falta que retornés un IO String, ha estat necessari una funció auxiliar que encapsulés el algorisme i retornés un IO String
 
 ```
 greedy :: [Posicio] -> Tauler -> Posicio
@@ -127,11 +139,9 @@ greedyIO :: [Posicio] -> Tauler -> IO String
 
 ### Smart
 
-Aquesta estratègia consisteix a generar un arbre de futures jugades. Depenent de la mida del tauler fixem una profunditat màxima de l'arbre o una altre. En aquest arbre trobem que cada node te un valor heuristic que evalua el estat de la partida en aquell futur tauler. 
+Aquesta estratègia consisteix a generar un arbre de futures jugades. Depenent de la mida del tauler fixem una profunditat màxima de l'arbre o una altre (degut a les limitacions del hardware). En aquest arbre trobem que cada node te un valor heuristic que evalua el estat de la partida en aquell futur tauler. 
 
-L'heuristic és un valor que podrà ser -1,1 o 0 on -1 representa que la partida està perduda, 1 representa que la partida està guanyada i per una altra banda 0 si la partida encara no està decidida. 
-
-Un cop he tingut l'arbre generat amb tots els heuristics, he implementat l'algorisme minmax per a poder decidir quina es la millor ruta ha seguir per a poder conseguir el millor resultat en la partida. Aquest algorisme el que fa és, recorrer per nivells de profunditat l'arbre i va modificant els valors dels nodes per a maximitzar o minimitzar els seus valors.
+Un cop obtenim l'arbre amb tots els heuristics, he implementat l'algorisme minmax per a poder decidir quina és la millor ruta ha seguir per a poder conseguir el millor resultat en la partida. Aquest algorisme el que fa és, recorrer per nivells de profunditat l'arbre i va modificant els valors dels nodes per a maximitzar o minimitzar els seus valors per a poder fer la millor partida possible.
 
 Com que aquesta funció retornava un Posició (String) i feia falta que retornés un IO String, ha estat necessari una funció auxiliar que encapsulés el algorisme i retornés un IO String
 
@@ -140,21 +150,22 @@ smart :: [Posicio] -> Tauler -> Posicio
 
 smartIO :: [Posicio] -> Tauler -> IO String
 ```
+
 ## Observacions
 
-Donat que el temps per a fe aquesta pràctica ha estat limitat, no he pogut implementar totes les funcionalitats que m'agradaria haver implementat si hagués tingu més temps. Per exemple m'hauria agradat portar un pas més enllà l'heuristic de les funcions greedy i smart. M'hauria agradat poder fer un heuristic que dongués encara més informació de manera que alhora de triar tingués més coses en compte, per així millorar la qualitat de la resposta.
+Donat que el temps per a fer aquesta pràctica ha estat limitat, no he pogut implementar totes les funcionalitats que m'agradaria haver implementat si hagués tingu més temps. Per exemple m'hauria agradat portar un pas més enllà l'heuristic de les funcions greedy i smart. M'hauria agradat poder fer un heuristic que dongués encara més informació de manera que alhora de triar tingués més coses en compte, per així millorar la qualitat de la resposta.
 
 
 
-## Authors
+## Autor
 
 * **Marc Domènech i Vila** - *Initial work* - [MarcDV1999](https://github.com/MarcDV1999)
 
-## License
+## Llicencia
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
 
-## Acknowledgments
+## Agraïments
 
 * Gràcies al meu germà que s'ha dedicat a viciar-se al joc per a poder comprovar que tot funciona com hauria de funcionar.
 
