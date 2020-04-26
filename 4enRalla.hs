@@ -47,7 +47,7 @@ main = do
     putStrLn "Introdueixi el nombre de columnes: "
     c <- getLine
 
-    putStrLn "Introdueixi la dificultat:\n0: Facil\n1: Dificil\n2: Impossible\n"
+    putStrLn "Introdueixi la dificultat:\n0: Facil\n1: Dificil\n2: Super Dificil\n"
     d <- getLine
 
     let files = read f
@@ -65,9 +65,9 @@ main = do
         -- Definim l'estrategia i el tauler inicial
         let taulerIni = (taulerInicialDif files columnes)
         let estrategia = case dificultat of
-                            0 -> aleatori
-                            1 -> greedy
-                            2 -> smart
+                            0 -> aleatoriIO
+                            1 -> greedyIO
+                            2 -> smartIO
 
         -- Pintem el tauler buit
         putStrLn (pintaTauler taulerIni)
@@ -81,7 +81,7 @@ main = do
 
 
 -- Donada una estrategia per a la Maquina, unes opcions i el tauler, la Persona mou fitxa
-mouPersona :: ([Posicio] -> Tauler -> Posicio) -> [Posicio] -> Tauler ->  IO()
+mouPersona :: ([Posicio] -> Tauler -> IO String) -> [Posicio] -> Tauler ->  IO()
 mouPersona estrategia opcions tauler = do
 
     putStrLn "-> Et toca Jugar!"
@@ -111,34 +111,38 @@ mouPersona estrategia opcions tauler = do
 
 
 -- Donada una estrategia, unes opcions i el tauler, la Maquina mou fitxa
-mouMaquina :: ([Posicio] -> Tauler -> Posicio) -> [Posicio] -> Tauler ->  IO()
+mouMaquina :: ([Posicio] -> Tauler -> IO String) -> [Posicio] -> Tauler ->  IO()
 mouMaquina estrategia opcions tauler = do
 
     -- Calculem la posicio a marcar en base a l'estrategia que fem servir
-    let pos = estrategia opcions tauler
-    print pos
-    --print (smart2 opcions tauler)
-
-    putStrLn "-> Juga la Maquina"
-    putStrLn ("-> La Maquina marca la fila: " ++ (show ((read pos) `mod` (length opcions))))
-
-    -- Calculem el nou tauler i les noves caselles disponibles per al seguent torn
-    let nouTauler = replace' pos "··" tauler
-    let opcionsActualitzadas = (novesOpcions pos opcions)
+    x <- estrategia opcions tauler
+    let pos = addZero x
     
-    putStrLn "\n"
-    putStrLn (pintaTauler nouTauler)
-    
-    -- Coses a comentar de cara a l'entrega
-    print nouTauler
-    print "-> Estat de la partida"
-    print (maxim opcions tauler)
-    
+    if pucMarcar pos opcions then do
+        --print (smart2 opcions tauler)
 
-    -- Comprovem que la partida no hagi acabat, sino seguim jugant
-    if (tablas opcionsActualitzadas) then guanyaPartida Ningu 
-    else if (partidaGuanyada pos Maquina nouTauler) then guanyaPartida Maquina
-    else mouPersona estrategia opcionsActualitzadas nouTauler
+        putStrLn "-> Juga la Maquina"
+        putStrLn ("-> La Maquina marca la fila: " ++ (show ((read pos) `mod` (length opcions))))
+
+        -- Calculem el nou tauler i les noves caselles disponibles per al seguent torn
+        let nouTauler = replace' pos "··" tauler
+        let opcionsActualitzadas = (novesOpcions pos opcions)
+        
+        putStrLn "\n"
+        putStrLn (pintaTauler nouTauler)
+        
+        -- Coses a comentar de cara a l'entrega
+        print nouTauler
+        print "-> Estat de la partida"
+        print (maxim opcions tauler)
+        
+
+        -- Comprovem que la partida no hagi acabat, sino seguim jugant
+        if (tablas opcionsActualitzadas) then guanyaPartida Ningu 
+        else if (partidaGuanyada pos Maquina nouTauler) then guanyaPartida Maquina
+        else mouPersona estrategia opcionsActualitzadas nouTauler
+    
+    else mouMaquina estrategia opcions tauler
 
     return ()
 
@@ -151,21 +155,17 @@ mouMaquina estrategia opcions tauler = do
 
 ------------------------    Estrategia Random    ------------------------
 
-aleatori :: [Posicio] -> Tauler -> Posicio
-aleatori opcions tauler = "02"
 
-
-aleatori2 :: [Posicio] -> Tauler -> IO Int
-aleatori2 opcions tauler = do
+-- Donat un conjunt de possibles caselles a tapar i un tauler, retorna una posicio aleatoria valida
+aleatoriIO :: [Posicio] -> Tauler -> IO String
+aleatoriIO opcions tauler = do
+    -- Treiem una columna aleatoria
     r1 <- randInt 0 ((length opcions)-1)
-    return (r1)
-
-aleatori3 :: [Posicio] -> Tauler -> IO()
-aleatori3 opcions tauler = do
-    xs <- aleatori2 opcions tauler
-    -- now xs is a normal value with type [[Int]]
-    print xs
-
+    
+    -- Calculem la casella que s'ha de tapar
+    let r1Str = addZero $ show r1
+    let pos = calcularPos r1Str opcions
+    return (pos)
 
 
 
@@ -180,6 +180,7 @@ maxim opcions tauler =  heuristicsFills where
     arbre = crearArbre 0 opcions tauler
     heuristicsFills = map arrelArbre (fillsArbre arbre)
     max = maximum heuristicsFills
+
 
 -- Donat un conjunt d'opcions i el tauler actual, ens retorna la millor posicio
 -- utilitzant l'estrategia smart (Algorisme minMax)
@@ -206,6 +207,13 @@ smart opcions tauler =  millorPos2 where
     
     -- Si veiem que no tenim una millor opcio, que agafi la primera que pugui
     millorPos2 = if millorPos == "-1" then [x | x <- opcions,x /= "-1"]!!0 else millorPos
+
+
+-- Aquesta funcio encapsula la funcio greedy per a que pugui ser passada per parametre posteriorment al moure una fitxa
+-- Transforma el resultat String en un IO String
+smartIO :: [Posicio] -> Tauler -> IO String
+smartIO opcions tauler = do
+    return (smart opcions tauler)
 
 
 -- Retorna -1 si guanya el adversari, 1 si guanyem nosaltres o 0 si no guanya ningu
@@ -235,6 +243,7 @@ heuristicSmart j opcions tauler = if j == Persona then hPersona else hMaquina wh
     hPersona = if (millorResultatP >= linia) then -1 else if (millorResultatM >= linia && (not molestarAM)) then 1 else 0   -- Juga Persona
     hMaquina = if (millorResultatM >= linia) then 1 else if (millorResultatP >= linia && (not molestarAP)) then -1 else 0
 
+
 -- Donat una profunditat, opcions actuals i el tauler, genera el arbre de possibilitats amb una 
 -- profunditat maxima i posant als nodes el valor del heuristic que correspon a cada context
 crearArbre :: Int -> [Posicio] -> Tauler -> Arbre Int
@@ -262,15 +271,6 @@ crearArbre prof opcions tauler
     -- a quina profunditat ens trobem
     valor = if even prof then heuristicSmart Maquina opcions tauler else heuristicSmart Persona opcions tauler 
 
-maxProf :: Int -> Int
-maxProf columnes
-    | columnes == 4 = 7
-    | columnes <= 7 = 5
-    | columnes <= 8 = 4
-    | columnes <= 11 = 3
-    | columnes <= 20 = 2
-    | otherwise = 1
-
 
 -- Donat un arbre amb els heuristics, aplica l'algorisme minmax per a recalcular els valors dels nodes
 minMax :: Int -> Arbre Int -> Arbre Int
@@ -283,14 +283,27 @@ minMax prof (Arbre arrel fills) = Arbre root successors where
     root = (arrelArbre (if even prof then maximFills else minimFills))
     successors = map (minMax (prof+1)) fills
 
+
 -- Donat un arbre, ens retorna la seva arrel
 arrelArbre :: Arbre a -> a
 arrelArbre (Arbre arrel _) = arrel
+
 
 -- Donat un arbre ens retorna els seus fills
 fillsArbre :: Arbre a -> [Arbre a]
 fillsArbre (Arbre _ fills) = fills
 
+
+-- Donat el nombre de columnes del tauler, calcula quina seria la profunditat maxima que podem tolerar
+-- per a que el algorisme smart no trigui massa temps en decidir
+maxProf :: Int -> Int
+maxProf columnes
+    | columnes == 4 = 7
+    | columnes <= 6 = 5
+    | columnes <= 8 = 4
+    | columnes <= 11 = 3
+    | columnes <= 20 = 2
+    | otherwise = 1
 
 
 
@@ -339,24 +352,39 @@ greedy opcions tauler =  if posPerGuanyar /= "-1" then posPerGuanyar else if pos
     nomesMillor = if (length coincidents) > 0 then coincidents!!0 else millorsPos2!!0
 
 
--- Retrona True si posant la fitxa a pos, es fa un 4 en linia
+-- Aquesta funcio encapsula la funcio greedy per a que pugui ser passada per parametre posteriorment al moure una fitxa
+-- Transforma el resultat String en un IO String
+greedyIO :: [Posicio] -> Tauler -> IO String
+greedyIO opcions tauler =  do
+
+   return (greedy opcions tauler)
+
+
+-- Retrona la mida de la linia mes gran que podem fer posant la fitxa a la casella pos
 millorJugada :: Posicio -> Jugador -> Tauler -> Int
 millorJugada "-1" _ _ = -1
 millorJugada pos j tauler = max (max hFila hColumna) hDiagonal where 
     fitxa = if j == Persona then "XX" else "··"
     nouTauler = replace' pos fitxa tauler
 
-    enFila = map group nouTauler                                                  -- Agrupo les files
-    enFilaFitxa = map (filter (==fitxa)) (concat enFila)                        -- Em quedo nomes amb les agrupacions de les fitxes que vui mirar
-    enFilaLinies = reverse $ sort [x | x <- enFilaFitxa, x /= []]                        -- Conto quantes agrupacions hi han de 4 o mes elements
-    hFila = if (length $ enFilaLinies!!0) > 0 then length $ enFilaLinies!!0 else 0            -- Calculem quina es la linia mes gran que podem fer en horitzontal
+    -- Agrupo les files i em quedo nomes amb les agrupacions de les fitxes que vui mirar
+    enFila = map group nouTauler                                                  
+    enFilaFitxa = map (filter (==fitxa)) (concat enFila)                        
     
-    enCol = map (group) (transpose nouTauler)                                   -- Agrupo les columnes
-    enColFitxa = map (filter (==fitxa)) (concat enCol)                          -- Em quedo nomes amb les agrupacions de les fitxes que vui mirar
-    enColLinies = reverse $ sort [x | x <- enColFitxa, x /= []]                      -- Conto quantes agrupacions hi han de 4 o mes elements
-    hColumna = if (length $ enColLinies!!0) > 0 then length $ enColLinies!!0 else 0   -- Calculem quina es la linia mes gran que podem fer en vertical
+    -- Conto quantes agrupacions hi han de 4 o mes elements i calculem quina es la linia mes gran que podem fer en horitzontal
+    enFilaLinies = reverse $ sort [x | x <- enFilaFitxa, x /= []]                        
+    hFila = if (length $ enFilaLinies!!0) > 0 then length $ enFilaLinies!!0 else 0           
     
-    hDiagonal = heuristicDiagonal pos j nouTauler        -- Calculem quina es la linia mes gran que podem fer en diagonal
+    -- Agrupo les columnes i em quedo nomes amb les agrupacions de les fitxes que vui mirar
+    enCol = map (group) (transpose nouTauler)                                   
+    enColFitxa = map (filter (==fitxa)) (concat enCol)                          
+
+    -- Conto quantes agrupacions hi han de 4 o mes elements i calculem quina es la linia mes gran que podem fer en vertical
+    enColLinies = reverse $ sort [x | x <- enColFitxa, x /= []]                      
+    hColumna = if (length $ enColLinies!!0) > 0 then length $ enColLinies!!0 else 0   
+
+    -- Calculem quina es la linia mes gran que podem fer en diagonal
+    hDiagonal = heuristicDiagonal pos j nouTauler        
 
 
 
@@ -367,14 +395,16 @@ millorJugada pos j tauler = max (max hFila hColumna) hDiagonal where
 
 --------    Funcions de Comprovacio o actualitzacio de variables
 
--- Donada una columna i un llistat de possibles jugades, calcula quina es la casella que correspon a la columna
+
+-- Calculo quina casella volem marcar, donada la columna on volem deixar caure la fitxa
 calcularPos :: Posicio -> [Posicio] -> Posicio
 calcularPos pos opcions 
-    | (x < columnes) = addZero $ opcions!!x
+    | (num < columnes) = addZero $ opcions!!num
     | otherwise = "-1"
     where 
-        x = read pos
+        num = read pos
         columnes = length opcions
+
 
 -- Ens dona un llistat amb totes les possibles opcions noves despres de marcar la posicio pos
 novesOpcions :: Posicio -> [Posicio] -> [Posicio]
@@ -384,7 +414,7 @@ novesOpcions pos opcionsActuals = map (\x -> if x == pos then novaPos else x) op
     novaPos = if (num - columnes) < 0 then "-1" else addZero $ show (num - columnes)
 
 
--- Ens Retorna True o False en funcio de si podem marcar o no aquella posicio
+-- Ens Retorna True o False en funcio de si podem marcar o no la posicio
 pucMarcar :: Posicio -> [Posicio] -> Bool
 pucMarcar pos opcions = if pos `elem` opcions && pos /= "-1" then True else False
 
@@ -397,46 +427,25 @@ pucMarcar pos opcions = if pos `elem` opcions && pos /= "-1" then True else Fals
 
 ------------------------    Calcul de partida guanyada    ------------------------
 
--- Retrona True si posant la fitxa a pos, es fa un 4 en linia
-partidaGuanyada :: Posicio -> Jugador -> Tauler -> Bool --if (length enFila3 > 0) || (length enColumna3 > 0) || (length enDiagonal > 0) then True else False
-partidaGuanyada pos j tauler =  if any liniaDe4 enFila2 || any liniaDe4 enColumna2 || enDiagonal then True else False where 
+-- Retrona True si posant la fitxa a pos, es fa un 4 en linia en qualsevol direccio
+partidaGuanyada :: Posicio -> Jugador -> Tauler -> Bool 
+partidaGuanyada pos j tauler =  if any liniaDe4 enFilaFitxes || any liniaDe4 enColFitxes || enDiagonal then True else False where 
     fitxa = if j == Persona then "XX" else "··"
     liniaDe4 = (\a -> length a >= linia)
 
-    enFila = map (group) tauler                             -- Agrupo les files
-    enFila2 = map (filter (==fitxa)) (concat enFila)        -- Em quedo nomes amb les agrupacions de les fitxes que vui mirar
+    -- Agrupo les files i em quedo nomes amb les agrupacions de les fitxes que vui mirar
+    enFila = map (group) tauler                             
+    enFilaFitxes = map (filter (==fitxa)) (concat enFila)        
 
-    enColumna = map (group) (transpose tauler)              -- Agrupo les columnes
-    enColumna2 = map (filter (==fitxa)) (concat enColumna)  -- Em quedo nomes amb les agrupacions de les fitxes que vui mirar
+    -- Agrupo les columnes i em quedo nomes amb les agrupacions de les fitxes que vui mirar
+    enColumna = map (group) (transpose tauler)              
+    enColFitxes = map (filter (==fitxa)) (concat enColumna)
 
+    -- Calculem la linia mes gran que pot fer en diagonal
     enDiagonal = diagonal pos j tauler                      
 
 
 -- Retorna una llista amb la diagonal descendent de la posicio pos del tauler
-calcularDiagonalDown2 :: Posicio -> Tauler -> [Posicio]
-calcularDiagonalDown2 pos tauler = result where
-    num = read pos
-    columnes = length (tauler!!0)
-    limit = columnes
-    maxElem = ((length tauler) * columnes) - 1
-    offsetDown = limit + 1
-    offsetUp = limit - 1
-    c = num `mod` columnes
-    taulerLlista = concat tauler
-
-    -- Fem una llista amb les posicions que es troben a la diagonal per sota i a sobre de pos.
-    dUp = (dropWhile (\x ->  x `mod` columnes > c) (reverse [num,num-offsetDown..0]))
-    dDown = (reverse (dropWhile (\x -> x `mod` columnes < c) (reverse [num+offsetDown,num+(2*offsetDown)..maxElem])))
-    
-    -- Busquem les posicions anteriors en el tauler i mirem si hi han fitxes marcades en elles
-    dUpInt =  map (\x -> if taulerLlista!!x == "XX" then -1 else if taulerLlista!!x == "··" then -2 else x) dUp
-    dUpString = map (\x -> if x >= 0 then addZero (show x) else if x == -1 then "XX" else "··") dUpInt
-    
-    dDownInt =  map (\x -> if taulerLlista!!x == "XX" then -1 else if taulerLlista!!x == "··" then -2 else x) dDown
-    dDownString = map (\x -> if x >= 0 then addZero (show x) else if x == -1 then "XX" else "··") dDownInt
-    
-    result = dUpString ++ dDownString
-
 calcularDiagonalDown :: Posicio -> Tauler -> [Posicio]
 calcularDiagonalDown pos tauler = result where
     num = read pos
@@ -459,32 +468,8 @@ calcularDiagonalDown pos tauler = result where
     -- Tornem la diagonal ascendent amb els valors del tauler
     result = dUpString ++ dDownString
 
+
 -- Retorna una llista amb la diagonal ascendent de la posicio pos del tauler
-calcularDiagonalUp2 :: Posicio -> Tauler -> [Posicio]
-calcularDiagonalUp2 pos tauler = result where
-    num = read pos
-    columnes = length (tauler!!0)
-    limit = columnes
-    maxElem = ((length tauler) * columnes) - 1
-    offsetDown = limit + 1
-    offsetUp = limit - 1
-    c = num `mod` columnes
-    taulerLlista = (concat tauler)
-
-    -- Fem una llista amb les posicions que es troben a la diagonal per sota i a sobre de pos.
-    dUp =  (dropWhile (\x -> x `mod` columnes < c) (reverse (take (limit-1) [num-offsetUp,num-(2*offsetUp)..0])))
-    dDown =  (reverse (dropWhile (\x -> x `mod` columnes > c) (reverse (take limit ([num,num+offsetUp..maxElem])))))
-    
-    -- Busquem les posicions anteriors en el tauler i mirem si hi han fitxes marcades en elles
-    dUpInt =  map (\x -> if taulerLlista!!x == "XX" then -1 else if taulerLlista!!x == "··" then -2 else x) dUp
-    dUpString = map (\x -> if x >= 0 then addZero (show x) else if x == -1 then "XX" else "··") dUpInt
-    
-    dDownInt =  map (\x -> if taulerLlista!!x == "XX" then -1 else if taulerLlista!!x == "··" then -2 else x) dDown
-    dDownString = map (\x -> if x >= 0 then addZero (show x) else if x == -1 then "XX" else "··") dDownInt
-   
-    result = reverse (dUpString ++ dDownString)
-
-
 calcularDiagonalUp :: Posicio -> Tauler -> [Posicio]
 calcularDiagonalUp pos tauler = result where
     num = read pos
