@@ -58,9 +58,9 @@ Exemple de Tauler de 6 x 7
 
 ## Funcionament General
 
-El programa principal es el main. En aquest fragment de codi s'introdueixen les dades necessaris per a configurar el joc i es decideix qui comença a jugar, si la maquina o l'usuari (de manera aleatoria).
+El programa principal es el main. En aquest fragment de codi s'introdueixen les dades necessaries per a configurar el joc i es decideix qui comença a jugar, si la maquina o l'usuari (de manera aleatoria).
 
-Posteriorment, les funcions mouMaquina i mouPersona s'encarreguen d'anar jugant.
+Posteriorment, les funcions mouMaquina i mouPersona s'encarreguen d'anar jugant cada torn.
 
 En el meu cas, el Tauler es representa com una llista de llistes de Strings. Cada posició buida del tauler, internament està representada amb un nombre que l'identifica. És a dir, internament el tauler anterior es veuria de la següent forma:
 
@@ -80,7 +80,7 @@ En el meu cas, el Tauler es representa com una llista de llistes de Strings. Cad
   |  35  |  36  |  37  |  38  |  39  |  40  |  41  |
   - ---- - ---- - ---- - ---- - ---- - ---- - ---- -
 ```
-Degut a aquesta implementació, em resulta més comode i senzill, modificar elements dins el tauler, cercar linies de 4 o més fitxes iguales, entre altres coses
+Degut a aquesta implementació, em resulta més comode i senzill, modificar elements dins el tauler, cercar linies de 4 o més fitxes iguales, entre altres coses.
 
 
 ## Algorsimes interessants
@@ -101,10 +101,15 @@ Tant en l'estrategia Greedy com la Smart (explicades més tard), requereixen de 
  
 
 ## Estratègies
+Per a poder passa per parametre l'estrategia, algunes d'elles tenen una segona funció que encapsula la l'algorisme per a poder retornar el mateix tipus d'informació en totes les estrategies.
 
 ### Random
 
-En aquesta estratègia la maquina decideix de manera aleatoria quina és la casella ha marcar. 
+En aquesta estratègia la maquina decideix de manera aleatoria quina és la casella ha marcar. Com que aquesta funció ja retorna un IO STring no ha fet falta implementar cap funció auxiliar
+
+```
+aleatoriIO :: [Posicio] -> Tauler -> IO String
+```
 
 ### Greedy
 
@@ -112,6 +117,13 @@ Aquesta estratègia consisteix a mirar de totes les possibles jugades que pot fe
 
 En aquesta estratègia fem ser heurístics per a valorar la calitat de cada solució (jugada). En aquest algorisme intentem buscar un equilibri entre aquella jugada que és més beneficiosa per a la maquina i aquella que molesta més al adversari. Depenent del estat de la partida, calcula que és el que més ens convé, si sumar punts o evitar que l'oponent sumi punts.
 
+Com que aquesta funció retornava un Posició (String) i feia falta que retornés un IO String, ha estat necessari una funció auxiliar que encapsulés el algorisme i retornés un IO String
+
+```
+greedy :: [Posicio] -> Tauler -> Posicio
+
+greedyIO :: [Posicio] -> Tauler -> IO String
+```
 
 ### Smart
 
@@ -121,6 +133,13 @@ L'heuristic és un valor que podrà ser -1,1 o 0 on -1 representa que la partida
 
 Un cop he tingut l'arbre generat amb tots els heuristics, he implementat l'algorisme minmax per a poder decidir quina es la millor ruta ha seguir per a poder conseguir el millor resultat en la partida. Aquest algorisme el que fa és, recorrer per nivells de profunditat l'arbre i va modificant els valors dels nodes per a maximitzar o minimitzar els seus valors.
 
+Com que aquesta funció retornava un Posició (String) i feia falta que retornés un IO String, ha estat necessari una funció auxiliar que encapsulés el algorisme i retornés un IO String
+
+```
+smart :: [Posicio] -> Tauler -> Posicio
+
+smartIO :: [Posicio] -> Tauler -> IO String
+```
 ## Observacions
 
 Donat que el temps per a fe aquesta pràctica ha estat limitat, no he pogut implementar totes les funcionalitats que m'agradaria haver implementat si hagués tingu més temps. Per exemple m'hauria agradat portar un pas més enllà l'heuristic de les funcions greedy i smart. M'hauria agradat poder fer un heuristic que dongués encara més informació de manera que alhora de triar tingués més coses en compte, per així millorar la qualitat de la resposta.
