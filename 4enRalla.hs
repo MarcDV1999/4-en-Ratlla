@@ -131,11 +131,6 @@ mouMaquina estrategia opcions tauler = do
         putStrLn "\n"
         putStrLn (pintaTauler nouTauler)
         
-        -- Coses a comentar de cara a l'entrega
-        print nouTauler
-        print "-> Estat de la partida"
-        print (maxim opcions tauler)
-        
 
         -- Comprovem que la partida no hagi acabat, sino seguim jugant
         if (tablas opcionsActualitzadas) then guanyaPartida Ningu 
@@ -174,12 +169,6 @@ aleatoriIO opcions tauler = do
 
 
 ------------------------    Estrategia Smart    ------------------------
-
-maxim :: [Posicio] -> Tauler -> [Int]
-maxim opcions tauler =  heuristicsFills where 
-    arbre = crearArbre 0 opcions tauler
-    heuristicsFills = map arrelArbre (fillsArbre arbre)
-    max = maximum heuristicsFills
 
 
 -- Donat un conjunt d'opcions i el tauler actual, ens retorna la millor posicio
