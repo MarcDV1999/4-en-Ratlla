@@ -7,13 +7,13 @@ Pràctica de Haskell de l'assignatura de Llenguatges de Programació de la Facul
 Com compilar el programa
 
 ```
-ghc 4enRalla.hs
+ghc joc.hs
 ```
 
 Com executar el programa
 
 ```
-./4enRalla
+./joc
 ```
 
 ## Tipus de Dades
