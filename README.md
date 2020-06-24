@@ -1,5 +1,5 @@
 # 4-en-Ratlla
-Pràctica de Haskell de l'assignatura de Llenguatges de Programació de la Facultat d'Informàtica de Barcelona. En aquesta pràctica he realitzat el joc clàssic del 4 en Ratlla.
+Pràctica de Haskell de l'assignatura de Llenguatges de Programació (LP) de la Facultat d'Informàtica de Barcelona. En aquesta pràctica he realitzat el joc clàssic del 4 en Ratlla.
 
 
 ## Instal·lació i execució
